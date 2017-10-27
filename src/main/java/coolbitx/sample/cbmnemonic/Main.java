@@ -17,9 +17,13 @@
 package coolbitx.sample.cbmnemonic;
 
 import api.bc.ExtendedKey;
+import api.bc.common.ByteUtils;
+import api.bc.common.Hash;
 import api.bc.common.ValidationException;
 import coolbitx.sample.cbmnemonic.util.BIP39;
 import coolbitx.sample.cbmnemonic.util.BIP44;
+import coolbitx.sample.cbmnemonic.util.WIF;
+import org.bouncycastle.util.encoders.Hex;
 
 /**
  *
@@ -28,13 +32,32 @@ import coolbitx.sample.cbmnemonic.util.BIP44;
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        new Main().testCoolBitXMnemonic();
-    }           
+        //new Main().testCoolBitXMnemonic();
+        new Main().dumpExtendedPrivkey(args[0]);
+    }
+    
+    private void dumpExtendedPrivkey(String mnemonic) throws Exception{
+
+        byte[] seed = BIP39.getSeed(mnemonic, "");
+
+        // Create master node with master seed.
+        ExtendedKey m = ExtendedKey.create(seed);
+
+        System.out.println("master extended key: " + m.serialize(true));
+
+        ExtendedKey ka = BIP44.getKey(m, 0, 0);
+        ExtendedKey k0 = ka.getChild(0);
+        System.out.println("first address: "+k0.getAddress());
+
+        System.out.println("BIP test page: http://bip32.org/");
+        System.out.println("    test path: m/44'/0'/0'/0/0");
+        
+    }
 
     private void testCoolBitXMnemonic() throws ValidationException {
         // Sample CoolBitX mnemonic
         String cbMnemonic = "591320 068789 099176 253583 105646 289515 528779 203443";
-        
+
         // Generate seed with the same algorithm used in BIP039, empty passphrase:
         // "...we use the PBKDF2 function with a mnemonic sentence (in UTF-8 NFKD) used 
         // as the password and the string "mnemonic" + passphrase (again in UTF-8 NFKD)
@@ -45,14 +68,16 @@ public class Main {
 
         // Create master node with master seed.
         ExtendedKey m = ExtendedKey.create(seed);
-        
+
         // Derive account based on BIP44
         ExtendedKey ka = BIP44.getKey(m, 0, 0);
-        
+
         // Print first 5 addresses of the first account.
         for (int i = 0; i < 5; i++) {
-            String addr = ka.getChild(i).getAddress();
-            System.out.println("acct 0 ,idx:" + i + " ,addr:" + addr);
+            ExtendedKey ck = ka.getChild(i);
+            String addr = ck.getAddress();
+            String wif = WIF.getWif(ck.getMaster());
+            System.out.println("acct 0 ,idx:" + i + " ,addr:" + addr + " ,wif:" + wif);
         }
     }
 
